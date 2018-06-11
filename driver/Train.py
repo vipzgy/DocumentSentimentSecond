@@ -34,11 +34,11 @@ def train(model, train_data, dev_data, test_data, vocab_srcs, vocab_para, vocab_
             if len(data.sentences) == 0:
                 continue
             start_time = time.time()
-            feature, target, feature_lengths = pair_data_variable(data, vocab_srcs, vocab_para, config)
+            feature_words, feature_labels, target, feature_lengths = pair_data_variable(data, vocab_srcs, vocab_para, config)
 
             model.train()
             optimizer.zero_grad()
-            logit = model(feature, feature_lengths)
+            logit = model(feature_words, feature_labels, feature_lengths)
             loss = F.cross_entropy(logit, target)
             loss_value = loss.data.cpu().numpy()
             loss.backward()
@@ -98,8 +98,8 @@ def evaluate(model, test_data, step, vocab_srcs, vocab_tgts, config):
     for idx, data in enumerate(test_data):
         if len(data.sentences) == 0:
             continue
-        feature, target, feature_lengths = pair_data_variable(data, vocab_srcs, vocab_tgts, config)
-        logit = model(feature, feature_lengths)
+        feature_words, feature_labels, target, feature_lengths = pair_data_variable(data, vocab_srcs, vocab_tgts, config)
+        logit = model(feature_words, feature_labels, feature_lengths)
         correct = (torch.max(logit, 1)[1].view(target.size()).data == target.data).sum()
         corrects += correct
         size += 1

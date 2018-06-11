@@ -83,7 +83,7 @@ if __name__ == '__main__':
 
     word_list = read_pkl(config.load_feature_voc)
     p_label_list, s_label_list = read_pkl(config.load_label_voc)
-    word_voc = VocabSrc(word_list)
+    word_voc = VocabSrc(word_list, p_label_list)
     p_label_voc = VocabTgt(p_label_list)
     s_label_voc = VocabTgt(s_label_list)
 

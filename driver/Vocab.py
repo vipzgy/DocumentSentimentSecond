@@ -7,11 +7,11 @@ PAD_S, UNK_S = '<pad>', '<unk>'
 
 
 class VocabSrc:
-    def __init__(self, word_list):
+    def __init__(self, word_list, p_word_list):
         # no fine tune
         self._id2extword = [PAD_S, UNK_S]
 
-        self.i2w = [PAD_S, UNK_S] + word_list
+        self.i2w = [PAD_S, UNK_S] + p_word_list + word_list
         self.w2i = {}
         for idx, word in enumerate(self.i2w):
             self.w2i[word] = idx

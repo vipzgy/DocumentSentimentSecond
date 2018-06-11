@@ -1,68 +1,51 @@
 # -*- coding: utf-8 -*-
 import torch
 import torch.nn as nn
-import torch.nn.init as init
-import torch.nn.functional as F
-from .BILSTM import BILSTM
 from .Attention import Attention
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class HierarchicalTarget(nn.Module):
     def __init__(self, config, embed_size, embed_dim, padding_idx, label_size, embedding=None):
         super(HierarchicalTarget, self).__init__()
         self.config = config
-        self.bilstm = BILSTM(config, embed_size, embed_dim, padding_idx, embedding)
-        self.attention_s = Attention(config)
-        self.attention_left = Attention(config)
-        self.attention_right = Attention(config)
+        self.embedding = nn.Embedding(embed_size, embed_dim, padding_idx=padding_idx)
+        if embedding is not None:
+            self.embedding.weight.data.copy_(torch.from_numpy(embedding))
+        self.dropout = nn.Dropout(config.dropout_embed)
 
-        self.w1 = nn.Linear(config.hidden_size * 4, config.hidden_size * 2)
-        init.xavier_uniform(self.w1.weight)
-        self.w2 = nn.Linear(config.hidden_size * 4, config.hidden_size * 2)
-        init.xavier_uniform(self.w2.weight)
-        self.w3 = nn.Linear(config.hidden_size * 4, config.hidden_size * 2)
-        init.xavier_uniform(self.w3.weight)
+        self.s_lstm = nn.LSTM(embed_dim, config.s_hidden_size, num_layers=config.s_num_layers,
+                              dropout=config.s_dropout_rnn, batch_first=True, bidirectional=True)
+        self.s_attention = Attention(config.s_hidden_size * 2, config.s_attention_size, config.use_cuda)
 
-        self.w4 = nn.Linear(config.hidden_size * 2, label_size)
-        init.xavier_uniform(self.w4.weight)
+        self.p_lstm = nn.LSTM(config.s_attention_size, config.p_hidden_size, num_layers=config.p_num_layers,
+                              dropout=config.p_dropout_rnn, bidirectional=True)
+        self.p_attention = Attention(config.p_hidden_size * 2, config.p_attention_size, config.use_cuda)
 
-    def forward(self, w, length, start, end):
-        s_slice, targeted_slice, left_slice, right_slice, \
-            s_mask, targeted_mask, left_mask, right_mask = self.bilstm(w, length, start, end)
+        self.output_linear = nn.Linear(config.p_attention_size, label_size)
 
-        if s_slice is not None:
-            s = self.attention_s(s_slice, s_mask, targeted_slice)
-        if left_slice is not None:
-            sl = self.attention_left(left_slice, left_mask, targeted_slice)
-        if right_slice is not None:
-            sr = self.attention_right(right_slice, right_mask, targeted_slice)
+    def forward(self, inputs_words, inputs_labels, inputs_lengths):
+        all_x = []
 
-        m_list = []
-        ht = torch.mean(targeted_slice, 1)
-        if s_slice is not None:
-            z = self.w1(torch.cat([s, ht], 1))
-            m_list.append(z)
-        if left_slice is not None:
-            zl = self.w2(torch.cat([sl, ht], 1))
-            m_list.append(zl)
-        if right_slice is not None:
-            zr = self.w3(torch.cat([sr, ht], 1))
-            m_list.append(zr)
+        for idx, (x, x_labels) in enumerate(zip(inputs_words, inputs_labels)):
+            x = self.embedding(x)
+            x = self.dropout(x)
+            x_labels = self.embedding(x_labels)
+            x = x + x_labels
 
-        count = 0
-        zz = torch.cat(m_list, 0)
-        zz = F.softmax(zz, 0)
-        if s_slice is not None:
-            z = torch.squeeze(zz[count], 0)
-            ss = torch.mul(z, s)
-            count += 1
-        if left_slice is not None:
-            zl = torch.squeeze(zz[count], 0)
-            ss += torch.mul(zl, sl)
-            count += 1
-        if right_slice is not None:
-            zr = torch.squeeze(zz[count], 0)
-            ss += torch.mul(zr, sr)
+            x = pack_padded_sequence(x, inputs_lengths[idx])
+            x, _ = self.s_lstm(x)
+            x, _ = pad_packed_sequence(x)
+            all_x.append(x)
 
-        result = self.w4(ss)
-        return result
+        # 这个时候batch_size要不要增大到句子个数
+        # 先试一试batch_size大于句子最大长度，设为150吧
+        x = all_x[0]
+        s = self.s_attention(x, inputs_lengths[0])
+        s = s.unsqueeze(0)
+        s, _ = self.p_lstm(s)
+        s = torch.transpose(s, 0, 1)
+        p = self.p_attention(s, [s.size(0)])
+
+        p = self.output_linear(p)
+        return p

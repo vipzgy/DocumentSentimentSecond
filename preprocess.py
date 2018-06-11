@@ -84,9 +84,9 @@ if __name__ == '__main__':
     pickle.dump(feature_list, open(config.save_feature_voc, 'wb'))
     pickle.dump((para_label_list, s_label_list), open(config.save_label_voc, 'wb'))
 
-    feature_voc = VocabSrc(feature_list)
-    p_label_voc = VocabTgt(para_label_dict)
-    s_label_voc = VocabTgt(s_label_dict)
+    feature_voc = VocabSrc(feature_list, para_label_list)
+    # p_label_voc = VocabTgt(para_label_dict)
+    # s_label_voc = VocabTgt(s_label_dict)
 
     # embedding
     if config.embedding_file:

@@ -50,10 +50,12 @@ def read_doc(doc_path, s_path, max_length, is_train=False):
             para_line = para_line.strip()
             para_strs = para_line.split('\t')
             t_label = para_strs[-1]
-            if t_label == '?':
-                t_label = '0'
-            if t_label == '2':
-                t_label = '1'
+            if t_label == '?' or t_label == '0':
+                t_label = 'neutral'
+            if t_label == '2' or t_label == '1':
+                t_label = 'positive'
+            if t_label == '-1':
+                t_label = 'negative'
             paragraph = Paragraph(t_label)
             para_label_counter[t_label] += 1
             sentences_number = int(para_strs[1])
@@ -102,10 +104,26 @@ def read_doc(doc_path, s_path, max_length, is_train=False):
                             print("something wrong.")
                     elif strings[2] == 'b':
                         starts.append(word_count - 1)
-                        labels.append(strings[3])
+                        s_label = strings[3]
+                        if s_label == '0':
+                            s_label = 'neutral'
+                        elif s_label == '-1':
+                            s_label = 'negative'
+                        elif s_label == '-2':
+                            s_label = 's_negative'
+                        elif s_label == '1':
+                            s_label = 'positive'
+                        elif s_label == '2':
+                            s_label = 's_positive'
+                        elif s_label == '?':
+                            s_label = 'neutral'
+                        else:
+                            print('something wrong!!! 121')
+                            exit()
+                        labels.append(s_label)
                         target_flag = True
                         if is_train:
-                            s_label_counter[strings[3] if strings[3] != '?' else '0'] += 1
+                            s_label_counter[s_label] += 1
                     elif strings[2] == 's':
                         starts.append(word_count - 1)
                         ends.append(word_count - 1)
