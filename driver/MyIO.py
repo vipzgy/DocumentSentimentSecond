@@ -17,7 +17,7 @@ class Paragraph:
     def __init__(self, sentiment):
         self.sentences = []
         self.sentiment = sentiment
-        # self.predict_sentiment = None
+        self.predict_sentiment = None
 
 
 class Sentence:
@@ -36,7 +36,7 @@ class Sentence:
         self.starts = starts
         self.ends = ends
         self.labels = labels
-        # self.predict_labels = []
+        self.predict_labels = []
 
 
 def read_doc(doc_path, s_path, max_length, is_train=False):

@@ -3,7 +3,6 @@ import os
 import time
 import torch
 import random
-import numpy as np
 import torch.optim as optim
 import torch.nn.functional as F
 from driver.DataLoader import create_batch_iter, pair_data_variable, pair_data_variable_predict

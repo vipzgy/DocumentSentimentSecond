@@ -71,8 +71,8 @@ class CompanyPredict:
 
     def predict(self, para):
         for idx in range(len(para.sentences)):
-            for idj in range(len(para.sentences[idx].targets)):
-                data = (para.sentences[idx].words, para.sentences[idx].targets[idj].start, para.sentences[idx].targets[idj].end)
+            for idj in range(len(para.sentences[idx].starts)):
+                data = (para.sentences[idx].words, para.sentences[idx].starts[idj], para.sentences[idx].ends[idj])
                 logit = predict(self.model, data, self.feature_vec, self.config)
                 logit = F.softmax(logit, dim=1)
                 tem = {}
@@ -84,6 +84,6 @@ class CompanyPredict:
                 # result['negative'] = tem['-1'] + tem['-2']
                 # result['neutral'] = tem['0']
                 # para.sentences[idx].targets[idj].sentiment = result
-                para.sentences[idx].targets[idj].sentiment = tem
+                para.sentences[idx].predict_labels.append(tem)
         return para.sentences
 

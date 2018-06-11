@@ -4,7 +4,7 @@ from configparser import ConfigParser
 
 
 class Configurable(object):
-    def __init__(self, config_file, extra_args):
+    def __init__(self, config_file, extra_args=[]):
         config = ConfigParser()
         config.read(config_file)
         if extra_args:
